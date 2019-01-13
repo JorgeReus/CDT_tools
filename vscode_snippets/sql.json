@@ -1,0 +1,29 @@
+{
+    "create_replace_function": {
+        "prefix": "crfunc",
+        "body": [
+            "--DROP FUNCTION ${1:$TM_FILENAME_BASE}(${3:paramtype})", "CREATE OR REPLACE FUNCTION ${1:$TM_FILENAME_BASE}(${2:param} ${3:paramtype}) RETURNS ${4:return_type} as $$", "DECLARE", "    /* Variables */", "    $5", "BEGIN", "    /* Function Body */", "    $0", "END; $$", "LANGUAGE plpgsql;", "--SELECT * FROM ${1:$TM_FILENAME_BASE}();"],
+        "description": "CREATE OR REPLACE FUNCTION Skeleton"
+    }, 
+    "for_loop": {
+        "prefix" : "forl",
+        "body": [
+            "FOR ${1:var_iter} IN ${2:query}", "LOOP", "    $0", "END LOOP;" ],
+        "description": "FOR LOOP Skeleton"
+    }, 
+    "case": {
+        "prefix": "casew", 
+        "body": ["CASE $1", "    WHEN ${2:1} THEN", "        $3", "    ELSE", "        $0", "END CASE;"],
+        "description": "CASE WHEN Skeleton"
+    }, 
+    "if_then_else": {
+        "prefix": "ifte", 
+        "body": ["IF ${1:expression} THEN", "    $2", "ELSE", "    $0", "END IF;"],
+        "description": "IF THEN ELSE Skeleton"
+    }, 
+    "create_type": {
+        "prefix": "crtype", 
+        "body": ["CREATE TYPE ${1:${TM_FILENAME_BASE/type_([a-zA-z]+_[0-9]+)/$1/}} AS (", "    ${2:param} ${0:paramType}", ");"],
+        "description": "CREATE TYPE Skeleton"
+    }
+}
