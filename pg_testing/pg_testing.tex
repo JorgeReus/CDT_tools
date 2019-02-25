@@ -53,6 +53,16 @@ SELECT * FROM finish();
 ROLLBACK;
 \end{lstlisting}
 
+\subsection{Instalación}
+\begin{enumerate}
+    \item git clone https://github.com/jlavallee/tap-harness-junit.git
+    \item git clone https://github.com/rjbs/Test-Deep.git
+    \item sudo cpan Module::Build
+    \item sudo cpan XML::Simple
+    \item cd Test-Deep \&\& perl Makefile.PL \&\& sudo make \&\& sudo make test \&\& sudo make install 
+    \item cd tap-harness-junit \&\& perl Build.PL \&\& sudo ./Build \&\& sudo ./Build install
+\end{enumerate}
+
 \subsection{¿Qué nos permite hacer pgTAP?}
 \begin{itemize}
     \item Probar existencia, tipo de lenguaje, tipo de retorno y ``salud'' de una función.
@@ -136,8 +146,38 @@ ROLLBACK;
 \end{itemize}
 \subsection{Muy bonito y todo. ¿Cómo se usa?}
 Al ser consultas se pueden ejecutar mediante un script de \textbf{psql} o directamente en una sesión. Ejecutar prueba por prueba es un dolor de cabeza, entonces por salud mental, que automáticamente se haga, ¿no?.
-Para la tarea de automatizarlo y darle un formato de salida adecuado existen herramientas de ejecución, tales como \textbf{pg\_prove}.
+Para la tarea de automatizarlo y darle un formato de salida adecuado existen herramientas de ejecución, tales como \textbf{pg\_prove}.\\
+Ejemplo:
+\textit{pg\_prove -d eld-superior-test TEST/*.sql --verbose}\\
+\begin{itemize}
+    \item -d especifica la base de datos a usar
+    \item Los siguientes argumentos son todos los archivos .sql que contienen los scripts de pruebas
+    \item --verbose significa que pg\_prove debe de mostrar los más que pueda de información
+\end{itemize}
 
 \section{Integración con Jenkins}
  Con base en las metodologías de CI y CD podemos solucionarlo. Estaría genial que se pudiera ejecutar cada vez que se hiciera un commit en el \textbf{VCS}, entonces \textbf{Jenkins} u otro servidor de CI/CD sería la opción.
+ Instrucciónes Mediante Jenkins CLI:\\
+ \begin{enumerate}
+     \item Descargar jenins CLI dando click en el link \textit{jenkins-cli.jar} dando click en la pantalla de jenkins CLI
+     \item Verificar que el comando \textit{java -jar jenkins-cli.jar -s http://\$JENKINS\_IP:\$JENKINS\_PORT/ -auth \$USER:\$PASSWORD list-plugins | grep junit} muestre junit en la salida, en el caso contrario:\\
+     \textit{java -jar jenkins-cli.jar -s http://\$JENKINS\_IP:\$JENKINS\_PORT/ -auth \$USER:\$PASSWORD install-plugin junit}
+     \item Modificar el archivo XML\\
+     Archivo de Ejemplo
+     \lstinputlisting[
+     backgroundcolor=\color{background},
+     language=XML,
+     showspaces=false,
+     basicstyle=\ttfamily,
+     numbers=left,
+     numberstyle=\tiny,
+     commentstyle=\color{gray}
+     ]{example.xml}
+     \item Crear un nuevo \textit{job} con el comando:\\
+     \textit{java -jar jenkins-cli.jar -s http://\$JENKINS\_IP:\$JENKINS\_PORT/ -auth \$USER:\$PASSWORD create-job \$NOMBRE < ejemplo.xml}
+     \item Crear las carpetas \textit{reports/junit} en \textit{/var/lib/jenkins/workspace/\$NOMBRE}
+     \item Ejecutar el nuevo \textbf{job} con el comando:\\
+     \textit{java -jar jenkins-cli.jar -s http://\$JENKINS\_IP:\$JENKINS\_PORT/ -auth \$USER:\$PASSWORD build \$NOMBRE}
+     
+ \end{enumerate}
 \end{document}
