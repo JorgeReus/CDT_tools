@@ -1,0 +1,143 @@
+% !TeX document-id = {a7325568-63cb-46d1-95d6-777a45054e5a}
+% !TeX TXS-program:compile = txs:///pdflatex/[--shell-escape]
+\documentclass{article}
+\usepackage{style}
+\begin{document}
+\maketitle
+\tableofcontents
+\section{Introducción}
+
+\subsection{Pruebas Unitarias}
+Las pruebas son una parte fundamental del desarrollo de software ya que nos permiten asegurar en parte la calidad de este. Las pruebas unitarias son un nivel de pruebas de software que involucra probar los componentes/unidades del software. \textbf{Una unidad es la parte más pequeña del software capaz de ser probada}.\\\\
+Existen frameworks pruebas unitarias para el nivel de aplicaciones, en el caso de java: Junit, TestNG, entre otros, pero estos frameworks solo son del nivel de aplicación, por ende necesitamos una herramienta que nos permita hacer pruebas a un nivel más bajo en el stack de tecnologías i.e. la base de datos.
+
+\subsection{pgTAP}
+\href{https://pgtap.org/documentation.html}{pgTAP} es un conjunto de funciones de base de datos que nos facilitan escribir pruebas estilo \href{https://en.wikipedia.org/wiki/Test_Anything_Protocol}{TAP} en scripts de \href{https://www.postgresql.org/docs/9.6/app-psql.html}{psql} o funciones estilo \href{https://en.wikipedia.org/wiki/XUnit}{XUnit}. El formato de salida estilo \textbf{TAP} nos permite obtener, analizar y reportar la información de las pruebas usando herramientas estandarizadas, como por ejemplo \textbf{pg\_prove}. La gran ventaja de pgTAP es que las funciones de prueba fueron escritas en pgplsql, por no tienen el \textit{overhead} de un driver de postgres o un ORM.
+
+Ejemplo:
+
+\begin{lstlisting}[
+    backgroundcolor=\color{background},
+    language=SQL,
+    showspaces=false,
+    basicstyle=\ttfamily,
+    numbers=left,
+    numberstyle=\tiny,
+    commentstyle=\color{gray}
+]
+-- Comenzamos una transacción
+BEGIN;
+-- Seleccionamos el número de pruebas a hacer, en este caso 2
+SELECT plan(2);
+--Variables
+\set var_id_alumno 1
+
+-- Prueba de inserción
+SELECT ok(
+    insertar_alumno(:src_id, 'nombre', 'apellido p', 'apellido m'),
+    'insertar_alumno() debería regresar true'
+);
+
+-- Prueba de consulta
+SELECT is(
+    ARRAY(
+    SELECT nb_alumno FROM tal01_alumno WHERE id_alumno = :id_alumno;
+    ),
+    ARRAY['character varying'],
+    'Consultamos el nombre de un alumno'
+);
+--Le decimos a pgTAP que las pruebas fueron completadas,
+--esto para que indique los resultados
+SELECT * FROM finish();
+--Hacemos un rollback de la transacción
+ROLLBACK;
+\end{lstlisting}
+
+\subsection{¿Qué nos permite hacer pgTAP?}
+\begin{itemize}
+    \item Probar existencia, tipo de lenguaje, tipo de retorno y ``salud'' de una función.
+    \begin{lstlisting}[
+    backgroundcolor=\color{background},
+    language=SQL,
+    showspaces=false,
+    basicstyle=\ttfamily,
+    numbers=left,
+    numberstyle=\tiny,
+    commentstyle=\color{gray}
+    ]
+    BEGIN;
+        SELECT plan(4);
+        SELECT has_function(
+        'public',
+        'spsce_1',
+        ARRAY[ 'integer', 'integer', 'integer' ],
+        'Probar la existencia de la función spsce_1(idCiclo, idNivel, idGrupo)'
+        );
+        SELECT function_lang_is(
+        'public',
+        'spsce_1',
+        ARRAY[ 'integer', 'integer', 'integer' ],
+        'plpgsql',
+        'Probar que la función spsce_1 está escrita el plpgsql'
+        );
+        SELECT function_returns(
+        'public',
+        'spsce_1',
+        ARRAY[ 'integer', 'integer', 'integer' ], 
+        'setof tce03_grupo',
+        'Probar que la función spsce_1 retorna setof tce03_grupo'
+        );
+        \set id_ciclo 1
+        \set id_nivel 1
+        \set id_grupo 1
+        SELECT lives_ok(
+            FORMAT(
+            'SELECT * FROM public.spsce_1( %s, %s, %s)',
+             :id_ciclo, :id_nivel, :id_grupo),
+            'Probar que la función spsce_1 no genere error en tiempo de ejecución'
+        );
+        SELECT * FROM finish();
+    ROLLBACK;
+    \end{lstlisting}
+    \item Verificar la existencia de esquemas, tablas, indices, llaves foráneas, tipos, etc.
+    \begin{lstlisting}[
+    backgroundcolor=\color{background},
+    language=SQL,
+    showspaces=false,
+    basicstyle=\ttfamily,
+    numbers=left,
+    numberstyle=\tiny,
+    commentstyle=\color{gray}
+    ]
+    BEGIN;
+        SELECT plan(8);
+        SELECT has_schema('public', 'Verificar que el esquema public exista');
+        SELECT has_table('public', 'tal01_alumno', 'Verificar que la tabla public.tal01_alumno exista');
+        SELECT has_sequence('public','tal01_alumno_id_alumno_seq', 
+            'verificar que la secuencia tal01_alumno_id_alumno_seq exista');
+        SELECT has_type( 'public', 'sce_25', 'verificar que el tipo de dato sce_25 exista' );
+        SELECT has_extension('public', 'pgtap', 'verificamos que la extensión pgtap exista');
+        SELECT has_column('public', 'tal01_alumno', 'tx_matricula', 
+            'Probar que la tabla public.tal01_alumno tenga la columna tx_matricula');
+        SELECT has_pk('public', 'tal01_alumno', 'Probar que la tabla public.tal01_alumno tenga pk');
+        SELECT fk_ok(
+            'public',
+            'tal01_alumno',
+            ARRAY['id_sexo'],
+            'public',
+            'tib14_sexo',
+            ARRAY['id_sexo']
+        );
+        SELECT * FROM finish();
+    ROLLBACK;
+    \end{lstlisting}
+    \item Probar configuraciones del gestor de base de datos.
+    \item Probar consultas.
+\end{itemize}
+\subsection{Muy bonito y todo. ¿Cómo se usa?}
+Al ser consultas se pueden ejecutar mediante un script de \textbf{psql} o directamente en una sesión. Ejecutar prueba por prueba es un dolor de cabeza, entonces por salud mental, que automáticamente se haga, ¿no?.
+Para la tarea de automatizarlo y darle un formato de salida adecuado existen herramientas de ejecución, tales como \textbf{pg\_prove}.
+
+\section{Integración con Jenkins}
+ Con base en las metodologías de CI y CD podemos solucionarlo. Estaría genial que se pudiera ejecutar cada vez que se hiciera un commit en el \textbf{VCS}, entonces \textbf{Jenkins} u otro servidor de CI/CD sería la opción.
+\end{document}
